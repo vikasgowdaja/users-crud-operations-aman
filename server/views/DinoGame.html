@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dual-World Dino Dash</title>
+  <style>
+    canvas {
+      border: 1px solid #000;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Game variables
+    let dino = { x: 50, y: 150, width: 20, height: 20, velocityY: 0, isInTopWorld: true, isJumping: false };
+    const gravity = 0.5;
+    const jumpForce = -10;
+    const groundY = { top: 150, bottom: 350 };
+    let obstacles = [];
+    let gameSpeed = 3;
+    let score = 0;
+
+    // Controls
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !dino.isJumping) {
+        dino.velocityY = jumpForce;
+        dino.isJumping = true;
+      }
+      if (e.key === 's') {
+        dino.isInTopWorld = !dino.isInTopWorld;
+        dino.y = dino.isInTopWorld ? groundY.top : groundY.bottom;
+      }
+    });
+
+    // Game loop
+    function update() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw worlds
+      ctx.fillStyle = 'lightblue'; // Top world
+      ctx.fillRect(0, 0, width, height / 2);
+      ctx.fillStyle = 'lightgreen'; // Bottom world (inverted)
+      ctx.fillRect(0, height / 2, width, height / 2);
+
+      // Draw dino
+      ctx.fillStyle = 'brown';
+      ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+      // Dino physics
+      dino.velocityY += gravity;
+      dino.y += dino.velocityY;
+
+      // Handle ground collision
+      const currentGround = dino.isInTopWorld ? groundY.top : groundY.bottom;
+      if (dino.y >= currentGround) {
+        dino.y = currentGround;
+        dino.velocityY = 0;
+        dino.isJumping = false;
+      }
+
+      // Update obstacles
+      obstacles.forEach((obstacle, index) => {
+        obstacle.x -= gameSpeed;
+
+        // Remove off-screen obstacles
+        if (obstacle.x + obstacle.width < 0) obstacles.splice(index, 1);
+
+        // Draw obstacles in both worlds
+        ctx.fillStyle = 'red';
+        ctx.fillRect(obstacle.x, groundY.top - obstacle.height, obstacle.width, obstacle.height); // Top
+        ctx.fillRect(obstacle.x, groundY.bottom, obstacle.width, -obstacle.height); // Bottom (inverted)
+      });
+
+      // Spawn new obstacles
+      if (Math.random() < 0.02) {
+        const obstacleHeight = Math.random() * 30 + 20;
+        obstacles.push({ x: width, width: 20, height: obstacleHeight });
+      }
+
+      // Collision detection
+      obstacles.forEach((obstacle) => {
+        const dinoBottomY = dino.y + dino.height;
+        const inCurrentWorld = dino.isInTopWorld
+          ? dino.y < groundY.top && dinoBottomY >= groundY.top - obstacle.height
+          : dino.y < groundY.bottom && dinoBottomY >= groundY.bottom;
+
+        if (
+          dino.x < obstacle.x + obstacle.width &&
+          dino.x + dino.width > obstacle.x &&
+          inCurrentWorld
+        ) {
+          alert(`Game Over! Your score: ${score}`);
+          resetGame();
+        }
+      });
+
+      // Increment score
+      score++;
+      ctx.fillStyle = 'black';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score: ${score}`, 10, 20);
+
+      requestAnimationFrame(update);
+    }
+
+    // Reset game
+    function resetGame() {
+      obstacles = [];
+      score = 0;
+      dino = { x: 50, y: 150, width: 20, height: 20, velocityY: 0, isInTopWorld: true, isJumping: false };
+    }
+
+    update();
+  </script>
+</body>
+</html>
